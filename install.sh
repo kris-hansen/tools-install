@@ -282,6 +282,9 @@ get_docker
 # Install Python
 get_python
 
+# Install Node.js
+get_node
+
 # Setup Cloud SDK
 export CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)"
 echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" | $SUDO tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
