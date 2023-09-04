@@ -1,5 +1,5 @@
 #!/bin/bash
-# This script is intended to run on Debian-based Linux distributions
+# This script is intended to run on macOS or Debian-based Linux distributions
 # It will install various development tools
 # Please run this script as a non-root user who has sudo privileges
 
@@ -8,16 +8,15 @@ what_am_i() {
     unset OS
     unset OSV
     unset CROS
-    if [ -d /mnt/chromeos ] && [ -d /dev/lxd ] && [ -f /opt/google/cros-containers/bin/garcon ]; then
-        export CROS="yes"
-    fi
     # Check if the system is Linux or OSX
     if [ "$(uname -s)" == "Darwin" ]; then
-        echo "OSX is not supported."
-        exit 1
-    elif [ -x "$(command -v lsb_release)" ]; then
+        export OS="macOS"
+    elif [ "$(uname -s)" == "Linux" ] && [ -x "$(command -v lsb_release)" ]; then
         export OS=$(lsb_release -is)
         export OSV=$(lsb_release -cs)
+        if [ -d /mnt/chromeos ] && [ -d /dev/lxd ] && [ -f /opt/google/cros-containers/bin/garcon ]; then
+            export CROS="yes"
+        fi
     else
         echo "Unsupported OS"
         exit 1
@@ -61,6 +60,30 @@ get_code() {
     check_success "Installation of VS Code extensions"
 }
 
+get_code_mac() {
+  # This function installs Visual Studio Code and some extensions
+  brew install --cask visual-studio-code-insiders
+  # Install the extensions
+  extensions=(
+    DavidAnson.vscode-markdownlint
+    eamodio.gitlens
+    ms-python.python
+    golang.go
+    ms-vscode.vscode-typescript-tslint-plugin
+    ms-vscode.wordcount
+    redhat.vscode-yaml
+    yzhang.markdown-all-in-one
+    GitHub.copilot
+    GitHub.copilot-chat
+  )
+
+  for extension in "${extensions[@]}"; do
+    code-insiders --install-extension $extension
+  done
+
+  code-insiders --list-extensions --show-versions
+}
+
 get_docker() {
     # This function installs Docker
     $SUDO apt-get install -y \
@@ -80,6 +103,11 @@ get_docker() {
     check_success "Installation of Docker"
 
     $SUDO usermod -aG docker $(whoami)
+}
+
+get_docker_mac() {
+  # This function installs Docker
+  brew install --cask docker
 }
 
 get_node() {
@@ -137,6 +165,14 @@ get_python() {
     echo "Installation of pyenv and Python build tools completed."
 }
 
+get_python_mac() {
+  # This function installs pyenv and Python-related build tools
+  brew install pyenv pyenv-virtualenv
+  echo 'eval "$(pyenv init --path)"' >> ~/.zshrc
+  echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.zshrc
+  source ~/.zshrc
+}
+
 get_flutter() {
     echo "Installing Flutter..."
 
@@ -168,6 +204,15 @@ get_flutter() {
     echo "Installation of Flutter completed."
 }
 
+get_flutter_mac() {
+  # This function installs Flutter
+  git clone https://github.com/flutter/flutter.git -b stable ~/flutter
+  echo 'export PATH="$PATH:$HOME/flutter/bin"' >> ~/.zshrc
+  source ~/.zshrc
+  flutter precache
+  flutter doctor
+}
+
 get_go() {
     echo "Installing Go via Go Version Manager (GVM)..."
 
@@ -192,6 +237,14 @@ get_go() {
     echo "Installation of Go via GVM completed."
     echo "Version Information:"
     go version
+}
+
+get_go_mac() {
+  # This function installs Go via Go Version Manager (GVM)
+  brew install go
+  echo 'export GOPATH=$HOME/go' >> ~/.zshrc
+  echo 'export PATH=$PATH:$GOPATH/bin' >> ~/.zshrc
+  source ~/.zshrc
 }
 
 
@@ -236,20 +289,73 @@ check_success() {
 # Main script
 # First check the runtime environment
 what_am_i
-# Ask for the sudo password upfront
-sudo -v
-# Keep sudo alive for the rest of the script
-while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
 
-# Update and upgrade the system
-$SUDO apt-get update && $SUDO apt-get upgrade -y
-check_success "System update and upgrade"
+# Install necessary tools based on OS
+if [ "$OS" == "macOS" ]; then
+    # Install Homebrew
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    check_success "Installation of Homebrew"
+    # Install Git
+    brew install git
+    check_success "Installation of Git"
+    # Install Chrome
+    brew install --cask google-chrome
+    check_success "Installation of Google Chrome"
+    # Install VS Code insiders
+    get_code_mac
+    # Install Python
+    get_python_mac
+    # Install Flutter
+    get_flutter_mac
+    # Install Go
+    get_go_mac
+    # Install Docker
+    get_docker_mac
+    # Install Node.js
+    get_node
+    brew install --cask tilix
+    check_success "Installation of Tilix"
+else
+    # Ask for the sudo password upfront for Linux
+    sudo -v
+    # Keep sudo alive for the rest of the script for Linux
+    while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
+    # Update and upgrade the system for Linux
+    sudo apt-get update && sudo apt-get upgrade -y
+    check_success "System update and upgrade"
+    # Install VS Code insiders
+    get_code
+    # Install Flutter
+    get_flutter
+    # Install Go
+    get_go
+    # Install Docker
+    get_docker
+    # Install Python
+    get_python
+    # Install Node.js
+    get_node
+    # Setup Cloud SDK
+    export CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)"
+    echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" | $SUDO tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | $SUDO apt-key add -
+    $SUDO apt-get update && $SUDO apt-get install -y google-cloud-sdk
+    check_success "Installation of Google Cloud SDK"
+    $SUDO apt install -y libglu1-mesa lib32stdc++6 python3-dev python3-pip python3-venv
+    check_success "Installation of Python Build Dependencies"
+    $SUDO pip3 install virtualenv wheel
+    check_success "Installation of Python Build Tools"
 
-# Install necessary tools
-$SUDO apt-get install -y lsb-release wget curl bzip2
-check_success "Installation of required tools"
+    # Install Misc tools
+    $SUDO apt-get install -y tilix xclip rlwrap
+    check_success "Installation of Misc tools"
+    curl https://cht.sh/:cht.sh | $SUDO tee /usr/local/bin/cht.sh
+    $SUDO chmod +x /usr/local/bin/cht.sh
+    check_success "Installation of cht.sh"
+    echo "Package Installation completed"
+fi
 
-# List of go packages to install
+# List of go packages to install, both OS's
 goPackages=(
   github.com/nsf/gocode
   github.com/uudashr/gopkgs/cmd/gopkgs
@@ -265,41 +371,5 @@ goPackages=(
 
 for pkg in "${goPackages[@]}"; do
   go get "${pkg}"
+  check_success "Installation of $pkg completed"
 done
-
-# Install VS Code insiders
-get_code
-
-# Install Flutter
-get_flutter
-
-# Install Go
-get_go
-
-# Install Docker
-get_docker
-
-# Install Python
-get_python
-
-# Install Node.js
-get_node
-
-# Setup Cloud SDK
-export CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)"
-echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" | $SUDO tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
-curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | $SUDO apt-key add -
-$SUDO apt-get update && $SUDO apt-get install -y google-cloud-sdk
-check_success "Installation of Google Cloud SDK"
-$SUDO apt install -y libglu1-mesa lib32stdc++6 python3-dev python3-pip python3-venv
-check_success "Installation of Python Build Dependencies"
-$SUDO pip3 install virtualenv wheel
-check_success "Installation of Python Build Tools"
-
-# Install Misc tools
-$SUDO apt-get install -y tilix xclip rlwrap
-check_success "Installation of Misc tools"
-curl https://cht.sh/:cht.sh | $SUDO tee /usr/local/bin/cht.sh
-$SUDO chmod +x /usr/local/bin/cht.sh
-check_success "Installation of cht.sh"
-echo "Installation completed"
