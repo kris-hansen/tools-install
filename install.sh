@@ -247,35 +247,6 @@ get_go_mac() {
   source ~/.zshrc
 }
 
-
-# Check for necessary commands
-for cmd in $SUDO curl gpg apt-get; do
-  if ! command -v $cmd &> /dev/null; then
-    echo "This script requires $cmd, but it is not installed. Exiting."
-    exit 1
-  fi
-done
-
-# Check if the user is root
-if [[ $EUID -eq 0 ]]; then
-   echo "This script should not be run as root. Exiting."
-   exit 1
-fi
-
-# Get OS and version info once at the start
-if ! OS=$(lsb_release -is) || ! OSV=$(lsb_release -cs); then
-    echo "Unsupported OS or unable to determine version."
-    exit 1
-fi
-
-if [ "$OS" != "Debian" ] && [ "$OS" != "Ubuntu" ]; then
-    echo "This script is designed for Debian-based distributions. You are running $OS."
-    exit 1
-fi
-
-# Set sudo command with non-interactive flag to prevent asking for password again and again
-SUDO="sudo -n"
-
 # Function to check command success
 check_success() {
     if [ $? -eq 0 ]; then
@@ -286,90 +257,119 @@ check_success() {
     fi
 }
 
-# Main script
-# First check the runtime environment
-what_am_i
+# Main function to execute the installation logic based on command-line arguments
+main() {
+    # First check the runtime environment
+    what_am_i
+    # Initialize required commands list
+    REQUIRED_COMMANDS="curl"
 
-# Install necessary tools based on OS
-if [ "$OS" == "macOS" ]; then
-    # Install Homebrew
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    check_success "Installation of Homebrew"
-    # Install Git
-    brew install git
-    check_success "Installation of Git"
-    # Install Chrome
-    brew install --cask google-chrome
-    check_success "Installation of Google Chrome"
-    # Install VS Code insiders
-    get_code_mac
-    # Install Python
-    get_python_mac
-    # Install Flutter
-    get_flutter_mac
-    # Install Go
-    get_go_mac
-    # Install Docker
-    get_docker_mac
-    # Install Node.js
-    get_node
-    brew install --cask tilix
-    check_success "Installation of Tilix"
+    # Append OS-specific required commands
+    case "$OS" in
+    Linux)
+        REQUIRED_COMMANDS="$REQUIRED_COMMANDS gpg apt-get $SUDO"
+        ;;
+    Darwin|macOS)  # macOS is identified as "Darwin"
+        REQUIRED_COMMANDS="$REQUIRED_COMMANDS"
+        ;;
+    *)
+        echo "Unsupported operating system: $OS"
+        exit 1
+        ;;
+    esac
+
+    # Check for necessary commands
+    for cmd in $REQUIRED_COMMANDS; do
+    if ! command -v $cmd &> /dev/null; then
+        echo "This script requires $cmd, but it is not installed. Exiting."
+        exit 1
+    fi
+    done
+
+    # Check if the user is root
+    if [[ $EUID -eq 0 ]]; then
+    echo "This script should not be run as root. Exiting."
+    exit 1
+    fi
+
+    # Set sudo command with non-interactive flag to prevent asking for password again and again
+    SUDO="sudo -n"
+
+    for arg in "$@"; do
+        case "$arg" in
+            all)
+                # Your existing code for installing all packages
+                if [ "$OS" == "macOS" ]; then
+                    # Install all macOS related packages
+                    get_code_mac
+                    get_python_mac
+                    get_flutter_mac
+                    get_go_mac
+                    get_docker_mac
+                    get_node
+                else
+                    # Install all Linux related packages
+                    get_code
+                    get_flutter
+                    get_go
+                    get_docker
+                    get_python
+                    get_node
+                fi
+                ;;
+            code)
+                if [ "$OS" == "macOS" ]; then
+                    get_code_mac
+                else
+                    get_code
+                fi
+                ;;
+            python)
+                if [ "$OS" == "macOS" ]; then
+                    get_python_mac
+                else
+                    get_python
+                fi
+                ;;
+            flutter)
+                if [ "$OS" == "macOS" ]; then
+                    get_flutter_mac
+                else
+                    get_flutter
+                fi
+                ;;
+            go)
+                if [ "$OS" == "macOS" ]; then
+                    get_go_mac
+                else
+                    get_go
+                fi
+                ;;
+            docker)
+                if [ "$OS" == "macOS" ]; then
+                    get_docker_mac
+                else
+                    get_docker
+                fi
+                ;;
+            node)
+                get_node
+                ;;
+            *)
+                echo "Invalid argument provided: $arg"
+                echo "Usage: $0 {all|code|python|flutter|go|docker|node}..."
+                exit 1
+                ;;
+        esac
+    done
+}
+
+# Check if any command line argument is provided
+if [ "$#" -eq 0 ]; then
+    echo "No arguments provided."
+    echo "Usage: $0 {all|code|python|flutter|go|docker|node}..."
+    exit 1
 else
-    # Ask for the sudo password upfront for Linux
-    sudo -v
-    # Keep sudo alive for the rest of the script for Linux
-    while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
-    # Update and upgrade the system for Linux
-    sudo apt-get update && sudo apt-get upgrade -y
-    check_success "System update and upgrade"
-    # Install VS Code insiders
-    get_code
-    # Install Flutter
-    get_flutter
-    # Install Go
-    get_go
-    # Install Docker
-    get_docker
-    # Install Python
-    get_python
-    # Install Node.js
-    get_node
-    # Setup Cloud SDK
-    export CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)"
-    echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" | $SUDO tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
-    curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | $SUDO apt-key add -
-    $SUDO apt-get update && $SUDO apt-get install -y google-cloud-sdk
-    check_success "Installation of Google Cloud SDK"
-    $SUDO apt install -y libglu1-mesa lib32stdc++6 python3-dev python3-pip python3-venv
-    check_success "Installation of Python Build Dependencies"
-    $SUDO pip3 install virtualenv wheel
-    check_success "Installation of Python Build Tools"
-
-    # Install Misc tools
-    $SUDO apt-get install -y tilix xclip rlwrap
-    check_success "Installation of Misc tools"
-    curl https://cht.sh/:cht.sh | $SUDO tee /usr/local/bin/cht.sh
-    $SUDO chmod +x /usr/local/bin/cht.sh
-    check_success "Installation of cht.sh"
-    echo "Package Installation completed"
+    main "$@"
 fi
 
-# List of go packages to install, both OS's
-goPackages=(
-  github.com/nsf/gocode
-  github.com/uudashr/gopkgs/cmd/gopkgs
-  github.com/ramya-rao-a/go-outline
-  github.com/acroca/go-symbols
-  golang.org/x/tools/cmd/guru
-  golang.org/x/tools/cmd/gorename
-  github.com/rogpeppe/godef
-  github.com/sqs/goreturns
-  golang.org/x/lint/golint
-  github.com/derekparker/delve/cmd/dlv
-)
-
-for pkg in "${goPackages[@]}"; do
-  go get "${pkg}"
-  check_success "Installation of $pkg completed"
-done
