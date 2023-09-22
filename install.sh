@@ -23,6 +23,23 @@ what_am_i() {
     fi
 }
 
+get_homebrew() {
+    if [ "$OS" == "macOS" ]; then
+        echo "Installing Homebrew for macOS..."
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        check_success "Installation of Homebrew"
+    else
+        echo "Installing Homebrew for Linux..."
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        test -d ~/.linuxbrew && eval "$(~/.linuxbrew/bin/brew shellenv)"
+        test -d /home/linuxbrew/.linuxbrew && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+        test -r ~/.bash_profile && echo "eval \$($(brew --prefix)/bin/brew shellenv)" >>~/.bash_profile
+        echo "eval \$($(brew --prefix)/bin/brew shellenv)" >>~/.profile
+        check_success "Installation of Homebrew"
+    fi
+}
+
+
 get_code() {
     # This function installs Visual Studio Code and some extensions
     set -euf -o pipefail
@@ -301,7 +318,8 @@ main() {
                 # Your existing code for installing all packages
                 if [ "$OS" == "macOS" ]; then
                     # Install all macOS related packages
-                    get_code_mac
+                    get_homebrew
+		    get_code_mac
                     get_python_mac
                     get_flutter_mac
                     get_go_mac
@@ -317,6 +335,9 @@ main() {
                     get_node
                 fi
                 ;;
+	    homebrew)
+		get_homebrew
+		;;
             code)
                 if [ "$OS" == "macOS" ]; then
                     get_code_mac
@@ -357,7 +378,7 @@ main() {
                 ;;
             *)
                 echo "Invalid argument provided: $arg"
-                echo "Usage: $0 {all|code|python|flutter|go|docker|node}..."
+                echo "Usage: $0 {all|homebrew|code|python|flutter|go|docker|node}..."
                 exit 1
                 ;;
         esac
