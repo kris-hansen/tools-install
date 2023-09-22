@@ -35,7 +35,8 @@ get_homebrew() {
         test -d /home/linuxbrew/.linuxbrew && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
         test -r ~/.bash_profile && echo "eval \$($(brew --prefix)/bin/brew shellenv)" >>~/.bash_profile
         echo "eval \$($(brew --prefix)/bin/brew shellenv)" >>~/.profile
-        check_success "Installation of Homebrew"
+        brew tap homebrew/cask-versions
+	check_success "Installation of Homebrew"
     fi
 }
 
