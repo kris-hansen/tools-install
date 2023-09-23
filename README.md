@@ -4,11 +4,12 @@
 
 This is a script which intends to get a base Debian/Darwin box productive for multi language development with a single execution. It was originally inspired by [files.zate.org/code.sh](files.zate.org/code.sh)
 
-I started working on this because I was running a virtual debian environment in a container and was frequently rebuilding it - so of course anything which can be repeated, can be scripted. Originally this script was a note which I kept stashed and pulled out periodically and then modified over time. I added it to GitHub hoping that it saves people some time and that others may help improve it. I use this now to ensure a consistent development 
+I started working on this because I was running a virtual debian environment in a container and was frequently rebuilding it - so of course anything which can be repeated, can be scripted. Originally this script was a note which I kept stashed and pulled out periodically and then modified over time. I added it to GitHub hoping that it saves people some time and that others may help improve it. I use this now to ensure a consistent development environment when I get a new laptop or set up a new container for development.
 
 ## Scope
 This script is highly opinionated as to what `productive` means and is focused on installing the following:
 
+- Homebrew (Mac)
 - VS Code Insiders
 - Various VS Code extensions which I find useful
 - Go (via GVM)
@@ -17,15 +18,17 @@ This script is highly opinionated as to what `productive` means and is focused o
 - Flutter
 - GCP SDK
 - Node (via nvm)
+- Chrome
 - Various libraries and tools which I find useful
 
 ## Running the Script
 
 This script is intended to run in a bash or zsh shell and can run by executing:
 
-`bash install.sh`
-
-(things will happen)
+```bash
+./install.sh
+Usage: ./install.sh {all|chrome|code|python|flutter|go|docker|node}...
+```
 
 ## Contributing
 

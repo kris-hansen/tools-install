@@ -23,6 +23,49 @@ what_am_i() {
     fi
 }
 
+get_homebrew() {
+    if [ "$OS" == "macOS" ]; then
+        echo "Installing Homebrew for macOS..."
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        check_success "Installation of Homebrew"
+    else
+        echo "Installing Homebrew for Linux..."
+        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        test -d ~/.linuxbrew && eval "$(~/.linuxbrew/bin/brew shellenv)"
+        test -d /home/linuxbrew/.linuxbrew && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+        test -r ~/.bash_profile && echo "eval \$($(brew --prefix)/bin/brew shellenv)" >>~/.bash_profile
+        echo "eval \$($(brew --prefix)/bin/brew shellenv)" >>~/.profile
+        brew tap homebrew/cask-versions
+	check_success "Installation of Homebrew"
+    fi
+}
+
+get_chrome() {
+    # This function installs Google Chrome on Debian-based Linux systems
+
+    # Fetch and install the GPG key
+    wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | $SUDO apt-key add -
+    check_success "Adding Google's GPG key"
+
+    # Add the Chrome repo to the sources list
+    echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | $SUDO tee /etc/apt/sources.list.d/google-chrome.list
+    check_success "Adding Google Chrome repository"
+
+    # Update and install the stable version of Chrome
+    $SUDO apt-get update
+    $SUDO apt-get install -y google-chrome-stable
+    check_success "Installation of Google Chrome"
+}
+
+get_chrome_mac() {
+    # This function installs Google Chrome on macOS
+
+    # Use brew to install Chrome
+    brew install --cask google-chrome
+    check_success "Installation of Google Chrome on macOS"
+}
+
+
 get_code() {
     # This function installs Visual Studio Code and some extensions
     set -euf -o pipefail
@@ -301,7 +344,9 @@ main() {
                 # Your existing code for installing all packages
                 if [ "$OS" == "macOS" ]; then
                     # Install all macOS related packages
-                    get_code_mac
+                    get_homebrew
+                    get_chrome_mac
+		            get_code_mac
                     get_python_mac
                     get_flutter_mac
                     get_go_mac
@@ -310,11 +355,22 @@ main() {
                 else
                     # Install all Linux related packages
                     get_code
+                    get_chrome
                     get_flutter
                     get_go
                     get_docker
                     get_python
                     get_node
+                fi
+                ;;
+            homebrew)
+                    get_homebrew
+                ;;
+            chrome)
+                if [ "$OS" == "macOS" ]; then
+                    get_chrome_mac
+                else
+                    get_chrome
                 fi
                 ;;
             code)
@@ -357,7 +413,7 @@ main() {
                 ;;
             *)
                 echo "Invalid argument provided: $arg"
-                echo "Usage: $0 {all|code|python|flutter|go|docker|node}..."
+                echo "Usage: $0 {all|homebrew|code|python|flutter|go|docker|node}..."
                 exit 1
                 ;;
         esac
@@ -367,7 +423,7 @@ main() {
 # Check if any command line argument is provided
 if [ "$#" -eq 0 ]; then
     echo "No arguments provided."
-    echo "Usage: $0 {all|code|python|flutter|go|docker|node}..."
+    echo "Usage: $0 {all|chrome|code|python|flutter|go|docker|node}..."
     exit 1
 else
     main "$@"
