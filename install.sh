@@ -185,8 +185,8 @@ get_node() {
 
 
 get_python() {
-    # This function installs pyenv and Python-related build tools
-    echo "Installing pyenv and Python build dependencies..."
+    # This function installs pyenv, Python, and pip
+    echo "Installing pyenv, Python, and pip..."
     
     # Install dependencies for building Python
     $SUDO apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev \
@@ -205,16 +205,27 @@ get_python() {
     source ~/.bashrc
     check_success "Setting up pyenv"
 
-    echo "Installation of pyenv and Python build tools completed."
+    # Install Python with pyenv
+    pyenv install 3.9.7  # You can specify any version you need
+    pyenv global 3.9.7
+    check_success "Installation of Python and pip"
+
+    echo "Installation of pyenv, Python, and pip completed."
 }
 
 get_python_mac() {
-  # This function installs pyenv and Python-related build tools
-  brew install pyenv pyenv-virtualenv
-  echo 'eval "$(pyenv init --path)"' >> ~/.zshrc
-  echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.zshrc
-  source ~/.zshrc
+    # This function installs pyenv, Python, and pip
+    brew install pyenv pyenv-virtualenv
+    echo 'eval "$(pyenv init --path)"' >> ~/.zshrc
+    echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.zshrc
+    source ~/.zshrc
+
+    # Install Python with pyenv
+    pyenv install 3.9.7  # You can specify any version you need
+    pyenv global 3.9.7
+    check_success "Installation of Python and pip"
 }
+
 
 get_flutter() {
     echo "Installing Flutter..."
