@@ -27,7 +27,8 @@ This script is intended to run in a bash or zsh shell and can run by executing:
 
 ```bash
 ./install.sh
-Usage: ./install.sh {all|chrome|code|python|flutter|go|docker|node}...
+Usage: ./install.sh {all|chrome|code|python|flutter|go|docker|node|misc_mac_tools}...
+
 ```
 
 ## Contributing
