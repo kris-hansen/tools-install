@@ -65,6 +65,17 @@ get_chrome_mac() {
     check_success "Installation of Google Chrome on macOS"
 }
 
+misc_mac_tools() {
+    brew install tree
+    brew install jq
+    brew install wget
+    brew install neofetch
+    brew install htop
+    brew install nmap
+    brew install speedtest-cli
+    brew install --cask rectangle
+    brew install bat
+}
 
 get_code() {
     # This function installs Visual Studio Code and some extensions
@@ -363,6 +374,7 @@ main() {
                     get_go_mac
                     get_docker_mac
                     get_node
+                    misc_mac_tools
                 else
                     # Install all Linux related packages
                     get_code
@@ -419,12 +431,19 @@ main() {
                     get_docker
                 fi
                 ;;
+            misc_mac_tools)
+                if [ "$OS" == "macOS" ]; then
+                    misc_mac_tools
+                else
+                    echo "misc_mac_tools is only available on macOS"
+                fi
+                ;;
             node)
                 get_node
                 ;;
             *)
                 echo "Invalid argument provided: $arg"
-                echo "Usage: $0 {all|homebrew|code|python|flutter|go|docker|node}..."
+                echo "Usage: $0 {all|homebrew|code|python|flutter|go|docker|node|misc_mac_tools}..."
                 exit 1
                 ;;
         esac
@@ -434,7 +453,7 @@ main() {
 # Check if any command line argument is provided
 if [ "$#" -eq 0 ]; then
     echo "No arguments provided."
-    echo "Usage: $0 {all|chrome|code|python|flutter|go|docker|node}..."
+    echo "Usage: $0 {all|chrome|code|python|flutter|go|docker|node|misc_mac_tools}..."
     exit 1
 else
     main "$@"
