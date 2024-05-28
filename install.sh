@@ -36,9 +36,12 @@ get_homebrew() {
         test -r ~/.bash_profile && echo "eval \$($(brew --prefix)/bin/brew shellenv)" >>~/.bash_profile
         echo "eval \$($(brew --prefix)/bin/brew shellenv)" >>~/.profile
         brew tap homebrew/cask-versions
-	check_success "Installation of Homebrew"
+        check_success "Installation of Homebrew"
+        echo "Reloading shell so brew command can be found..."
+        source ~/.profile
     fi
 }
+
 
 get_chrome() {
     # This function installs Google Chrome on Debian-based Linux systems
@@ -63,6 +66,30 @@ get_chrome_mac() {
     # Use brew to install Chrome
     brew install --cask google-chrome
     check_success "Installation of Google Chrome on macOS"
+}
+
+get_rectangle_mac() {
+    # This function installs Rectangle window manager on macOS
+
+    # Use brew to install Rectangle
+    brew install --cask rectangle
+    check_success "Installation of Rectangle window manager on macOS"
+}
+
+get_ollama_mac() {
+    # This function installs Ollama on macOS
+
+    # Use brew to install Ollama
+    brew install --cask ollama
+    check_success "Installation of Ollama on macOS"
+}
+
+get_hyper_mac() {
+    # This function installs Hyper terminal on macOS
+
+    # Use brew to install Hyper
+    brew install --cask hyper
+    check_success "Installation of Hyper terminal on macOS"
 }
 
 misc_mac_tools() {
@@ -116,7 +143,7 @@ get_code() {
 
 get_code_mac() {
   # This function installs Visual Studio Code and some extensions
-  brew install --cask visual-studio-code-insiders
+  brew install --cask visual-studio-code
   # Install the extensions
   extensions=(
     DavidAnson.vscode-markdownlint
@@ -132,10 +159,10 @@ get_code_mac() {
   )
 
   for extension in "${extensions[@]}"; do
-    code-insiders --install-extension $extension
+    code --install-extension $extension
   done
 
-  code-insiders --list-extensions --show-versions
+  code --list-extensions --show-versions
 }
 
 get_docker() {
@@ -375,6 +402,9 @@ main() {
                     get_docker_mac
                     get_node
                     misc_mac_tools
+                    get_rectangle_mac
+                    get_ollama_mac
+                    get_hyper_mac
                 else
                     # Install all Linux related packages
                     get_code
@@ -438,12 +468,33 @@ main() {
                     echo "misc_mac_tools is only available on macOS"
                 fi
                 ;;
+            rectangle)
+                if [ "$OS" == "macOS" ]; then
+                    get_rectangle_mac
+                else
+                    echo "Rectangle is only available on macOS"
+                fi
+                ;;
+            ollama)
+                if [ "$OS" == "macOS" ]; then
+                    get_ollama_mac
+                else
+                    echo "Ollama is only available on macOS"
+                fi
+                ;;
+            hyper)
+                if [ "$OS" == "macOS" ]; then
+                    get_hyper_mac
+                else
+                    echo "Hyper is only available on macOS"
+                fi
+                ;;
             node)
                 get_node
                 ;;
             *)
                 echo "Invalid argument provided: $arg"
-                echo "Usage: $0 {all|homebrew|code|python|flutter|go|docker|node|misc_mac_tools}..."
+                echo "Usage: $0 {all|homebrew|code|python|flutter|go|docker|node|misc_mac_tools|rectangle|ollama|hyper}..."
                 exit 1
                 ;;
         esac
@@ -453,7 +504,7 @@ main() {
 # Check if any command line argument is provided
 if [ "$#" -eq 0 ]; then
     echo "No arguments provided."
-    echo "Usage: $0 {all|chrome|code|python|flutter|go|docker|node|misc_mac_tools}..."
+    echo "Usage: $0 {all|homebrew|code|python|flutter|go|docker|node|misc_mac_tools|rectangle|ollama|hyper}..."
     exit 1
 else
     main "$@"

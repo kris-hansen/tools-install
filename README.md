@@ -10,7 +10,7 @@ I started working on this because I was running a virtual debian environment in 
 This script is highly opinionated as to what `productive` means and is focused on installing the following:
 
 - Homebrew (Mac)
-- VS Code Insiders
+- VS Code
 - Various VS Code extensions which I find useful
 - Go (via GVM)
 - Python (via Pyenv)
@@ -18,6 +18,9 @@ This script is highly opinionated as to what `productive` means and is focused o
 - Flutter
 - GCP SDK
 - Node (via nvm)
+- Ollama (for local LLM execution)
+- Rectangle (Mac utility for window management)
+- Hyper (Mac terminal)
 - Chrome
 - Various libraries and tools which I find useful
 
