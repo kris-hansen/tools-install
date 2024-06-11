@@ -339,6 +339,12 @@ get_go_mac() {
   source ~/.zshrc
 }
 
+get_gcloud_mac() {
+  brew install --cask google-cloud-sdk
+  echo 'source /usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc' >> ~/.zshrc
+  source ~/.zshrc
+}
+
 # Function to check command success
 check_success() {
     if [ $? -eq 0 ]; then
@@ -405,6 +411,7 @@ main() {
                     get_rectangle_mac
                     get_ollama_mac
                     get_hyper_mac
+                    get_gcloud_mac
                 else
                     # Install all Linux related packages
                     get_code
@@ -454,6 +461,13 @@ main() {
                     get_go
                 fi
                 ;;
+            gcloud)
+                if [ "$OS" == "macOS" ]; then
+                    get_gcloud_mac
+                else
+                    echo "gcloud is only currently available on macOS"
+                fi
+                ;;
             docker)
                 if [ "$OS" == "macOS" ]; then
                     get_docker_mac
@@ -494,7 +508,7 @@ main() {
                 ;;
             *)
                 echo "Invalid argument provided: $arg"
-                echo "Usage: $0 {all|homebrew|code|python|flutter|go|docker|node|misc_mac_tools|rectangle|ollama|hyper}..."
+                echo "Usage: $0 {all|homebrew|code|python|flutter|go|gcloud|docker|node|misc_mac_tools|rectangle|ollama|hyper}..."
                 exit 1
                 ;;
         esac
@@ -504,7 +518,7 @@ main() {
 # Check if any command line argument is provided
 if [ "$#" -eq 0 ]; then
     echo "No arguments provided."
-    echo "Usage: $0 {all|homebrew|code|python|flutter|go|docker|node|misc_mac_tools|rectangle|ollama|hyper}..."
+    echo "Usage: $0 {all|homebrew|code|python|flutter|go|gcloud|docker|node|misc_mac_tools|rectangle|ollama|hyper}..."
     exit 1
 else
     main "$@"
