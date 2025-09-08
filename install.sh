@@ -3,6 +3,12 @@
 # It will install various development tools
 # Please run this script as a non-root user who has sudo privileges
 
+# Color codes for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
 what_am_i() {
     # Clear any existing values
     unset OS
@@ -18,33 +24,52 @@ what_am_i() {
             export CROS="yes"
         fi
     else
-        echo "Unsupported OS"
+        echo -e "${RED}Unsupported OS${NC}"
         exit 1
     fi
 }
 
+# Function to check if a command exists
+command_exists() {
+    command -v "$1" &> /dev/null
+}
+
+# Function to check if a brew package is installed
+brew_package_installed() {
+    brew list --cask "$1" &> /dev/null || brew list "$1" &> /dev/null
+}
+
 get_homebrew() {
-    if [ "$OS" == "macOS" ]; then
-        echo "Installing Homebrew for macOS..."
-        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-        check_success "Installation of Homebrew"
+    if command_exists brew; then
+        echo -e "${YELLOW}Homebrew is already installed. Updating...${NC}"
+        brew update
+        check_success "Homebrew update"
     else
-        echo "Installing Homebrew for Linux..."
-        /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-        test -d ~/.linuxbrew && eval "$(~/.linuxbrew/bin/brew shellenv)"
-        test -d /home/linuxbrew/.linuxbrew && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-        test -r ~/.bash_profile && echo "eval \$($(brew --prefix)/bin/brew shellenv)" >>~/.bash_profile
-        echo "eval \$($(brew --prefix)/bin/brew shellenv)" >>~/.profile
-        brew tap homebrew/cask-versions
-        check_success "Installation of Homebrew"
-        echo "Reloading shell so brew command can be found..."
-        source ~/.profile
+        if [ "$OS" == "macOS" ]; then
+            echo "Installing Homebrew for macOS..."
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+            check_success "Installation of Homebrew"
+        else
+            echo "Installing Homebrew for Linux..."
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+            test -d ~/.linuxbrew && eval "$(~/.linuxbrew/bin/brew shellenv)"
+            test -d /home/linuxbrew/.linuxbrew && eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+            test -r ~/.bash_profile && echo "eval \$($(brew --prefix)/bin/brew shellenv)" >>~/.bash_profile
+            echo "eval \$($(brew --prefix)/bin/brew shellenv)" >>~/.profile
+            brew tap homebrew/cask-versions
+            check_success "Installation of Homebrew"
+            echo "Reloading shell so brew command can be found..."
+            source ~/.profile
+        fi
     fi
 }
 
-
 get_chrome() {
     # This function installs Google Chrome on Debian-based Linux systems
+    if command_exists google-chrome-stable; then
+        echo -e "${YELLOW}Google Chrome is already installed${NC}"
+        return
+    fi
 
     # Fetch and install the GPG key
     wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | $SUDO apt-key add -
@@ -62,6 +87,10 @@ get_chrome() {
 
 get_chrome_mac() {
     # This function installs Google Chrome on macOS
+    if brew_package_installed "google-chrome"; then
+        echo -e "${YELLOW}Google Chrome is already installed${NC}"
+        return
+    fi
 
     # Use brew to install Chrome
     brew install --cask google-chrome
@@ -70,6 +99,10 @@ get_chrome_mac() {
 
 get_rectangle_mac() {
     # This function installs Rectangle window manager on macOS
+    if brew_package_installed "rectangle"; then
+        echo -e "${YELLOW}Rectangle is already installed${NC}"
+        return
+    fi
 
     # Use brew to install Rectangle
     brew install --cask rectangle
@@ -78,6 +111,10 @@ get_rectangle_mac() {
 
 get_ollama_mac() {
     # This function installs Ollama on macOS
+    if brew_package_installed "ollama"; then
+        echo -e "${YELLOW}Ollama is already installed${NC}"
+        return
+    fi
 
     # Use brew to install Ollama
     brew install --cask ollama
@@ -86,6 +123,10 @@ get_ollama_mac() {
 
 get_hyper_mac() {
     # This function installs Hyper terminal on macOS
+    if brew_package_installed "hyper"; then
+        echo -e "${YELLOW}Hyper is already installed${NC}"
+        return
+    fi
 
     # Use brew to install Hyper
     brew install --cask hyper
@@ -93,19 +134,60 @@ get_hyper_mac() {
 }
 
 misc_mac_tools() {
-    brew install tree
-    brew install jq
-    brew install wget
-    brew install neofetch
-    brew install htop
-    brew install nmap
-    brew install speedtest-cli
-    brew install --cask rectangle
-    brew install bat
+    echo "Installing miscellaneous macOS tools..."
+    local tools=(tree jq wget neofetch htop nmap speedtest-cli bat)
+    
+    for tool in "${tools[@]}"; do
+        if brew_package_installed "$tool"; then
+            echo -e "${YELLOW}$tool is already installed${NC}"
+        else
+            brew install "$tool"
+            check_success "Installation of $tool"
+        fi
+    done
+}
+
+update_vscode_extensions() {
+    # Function to install/update VS Code extensions
+    local code_cmd="$1"
+    
+    echo "Installing/Updating VS Code extensions..."
+    
+    # Install the extensions
+    extensions=(
+        DavidAnson.vscode-markdownlint
+        eamodio.gitlens
+        ms-python.python
+        golang.go
+        ms-vscode.vscode-typescript-tslint-plugin
+        ms-vscode.wordcount
+        redhat.vscode-yaml
+        yzhang.markdown-all-in-one
+        GitHub.copilot
+        GitHub.copilot-chat
+    )
+
+    for extension in "${extensions[@]}"; do
+        echo "Installing extension: $extension"
+        $code_cmd --install-extension $extension --force
+    done
+
+    $code_cmd --list-extensions --show-versions
+    check_success "Installation/Update of VS Code extensions"
 }
 
 get_code() {
     # This function installs Visual Studio Code and some extensions
+    if command_exists code-insiders; then
+        echo -e "${YELLOW}VS Code Insiders is already installed. Updating extensions...${NC}"
+        update_vscode_extensions "code-insiders"
+        return
+    elif command_exists code; then
+        echo -e "${YELLOW}VS Code is already installed. Updating extensions...${NC}"
+        update_vscode_extensions "code"
+        return
+    fi
+
     set -euf -o pipefail
     $SUDO apt-get install -y gpg
     check_success "Installation of GPG"
@@ -116,57 +198,34 @@ get_code() {
     check_success "Adding VS Code repository"
 
     $SUDO apt-get update -y
-    $SUDO apt-get install -y code-insiders libxss1 libasound2
+    $SUDO apt-get install -y code libxss1 libasound2
     check_success "Installation of VS Code"
 
-    # Install the extensions
-    extensions=(
-      DavidAnson.vscode-markdownlint
-      eamodio.gitlens
-      ms-python.python
-      golang.go
-      ms-vscode.vscode-typescript-tslint-plugin
-      ms-vscode.wordcount
-      redhat.vscode-yaml
-      yzhang.markdown-all-in-one
-      GitHub.copilot
-      GitHub.copilot-chat
-    )
-
-    for extension in "${extensions[@]}"; do
-      code-insiders --install-extension $extension
-    done
-
-    code-insiders --list-extensions --show-versions
-    check_success "Installation of VS Code extensions"
+    update_vscode_extensions "code"
 }
 
 get_code_mac() {
-  # This function installs Visual Studio Code and some extensions
-  brew install --cask visual-studio-code
-  # Install the extensions
-  extensions=(
-    DavidAnson.vscode-markdownlint
-    eamodio.gitlens
-    ms-python.python
-    golang.go
-    ms-vscode.vscode-typescript-tslint-plugin
-    ms-vscode.wordcount
-    redhat.vscode-yaml
-    yzhang.markdown-all-in-one
-    GitHub.copilot
-    GitHub.copilot-chat
-  )
+    # This function installs Visual Studio Code and some extensions
+    if command_exists code; then
+        echo -e "${YELLOW}VS Code is already installed. Updating extensions...${NC}"
+        update_vscode_extensions "code"
+        return
+    fi
 
-  for extension in "${extensions[@]}"; do
-    code --install-extension $extension
-  done
-
-  code --list-extensions --show-versions
+    brew install --cask visual-studio-code
+    check_success "Installation of VS Code"
+    
+    update_vscode_extensions "code"
 }
 
 get_docker() {
     # This function installs Docker
+    if command_exists docker; then
+        echo -e "${YELLOW}Docker is already installed${NC}"
+        docker --version
+        return
+    fi
+
     $SUDO apt-get install -y \
         apt-transport-https \
         ca-certificates \
@@ -184,47 +243,71 @@ get_docker() {
     check_success "Installation of Docker"
 
     $SUDO usermod -aG docker $(whoami)
+    echo -e "${YELLOW}Please log out and back in for Docker group changes to take effect${NC}"
 }
 
 get_docker_mac() {
-  # This function installs Docker
-  brew install --cask docker
+    # This function installs Docker
+    if brew_package_installed "docker"; then
+        echo -e "${YELLOW}Docker is already installed${NC}"
+        return
+    fi
+
+    brew install --cask docker
+    check_success "Installation of Docker"
 }
 
 get_node() {
-    echo "Installing Node.js via NVM..."
+    echo "Installing/Updating Node.js via NVM..."
 
-    # Retrieve latest NVM version from Github API
-    latest_nvm=$(curl --silent "https://api.github.com/repos/nvm-sh/nvm/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-    # Download and install NVM
-    curl -o- "https://raw.githubusercontent.com/nvm-sh/nvm/${latest_nvm}/install.sh" | bash
-    check_success "Installation of NVM"
+    # Check if NVM is already installed
+    if [ -d "$HOME/.nvm" ]; then
+        echo -e "${YELLOW}NVM is already installed. Updating...${NC}"
+        cd "$HOME/.nvm"
+        git fetch --tags origin
+        git checkout `git describe --abbrev=0 --tags --match "v[0-9]*" $(git rev-list --tags --max-count=1)`
+        \. "$HOME/.nvm/nvm.sh"
+    else
+        # Retrieve latest NVM version from Github API
+        latest_nvm=$(curl --silent "https://api.github.com/repos/nvm-sh/nvm/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+        # Download and install NVM
+        curl -o- "https://raw.githubusercontent.com/nvm-sh/nvm/${latest_nvm}/install.sh" | bash
+        check_success "Installation of NVM"
+    fi
 
-    # Add the following lines to .bashrc or .bash_profile (on Mac) to source nvm
-    echo 'export NVM_DIR="$HOME/.nvm"' >> ~/.bashrc
-    echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm' >> ~/.bashrc
-    echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion' >> ~/.bashrc
+    # Determine shell config file
+    if [ "$OS" == "macOS" ]; then
+        SHELL_CONFIG="$HOME/.zshrc"
+    else
+        SHELL_CONFIG="$HOME/.bashrc"
+    fi
 
-    # Source .bashrc to load new shell configs
-    source ~/.bashrc
+    # Add NVM to shell config if not already present
+    if ! grep -q "NVM_DIR" "$SHELL_CONFIG"; then
+        echo 'export NVM_DIR="$HOME/.nvm"' >> "$SHELL_CONFIG"
+        echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm' >> "$SHELL_CONFIG"
+        echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion' >> "$SHELL_CONFIG"
+    fi
 
-    # Install the latest version of Node.js
-    nvm install node
-    check_success "Installation of latest Node.js version"
+    # Source NVM
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
-    # Set the installed version as default
-    nvm use node
-    check_success "Setting latest Node.js version as default"
+    # Install the latest LTS version of Node.js
+    nvm install --lts
+    nvm use --lts
+    nvm alias default 'lts/*'
+    check_success "Installation of latest LTS Node.js version"
 
     echo "Installation of Node.js via NVM completed."
     echo "Version Information:"
     node -v
+    npm -v
 }
-
 
 get_python() {
     # This function installs pyenv, Python, and pip
-    echo "Installing pyenv, Python, and pip..."
+    echo "Installing/Updating pyenv, Python, and pip..."
     
     # Install dependencies for building Python
     $SUDO apt-get install -y make build-essential libssl-dev zlib1g-dev libbz2-dev \
@@ -232,41 +315,66 @@ get_python() {
     tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
     check_success "Installation of Python build dependencies"
     
-    # Install pyenv
-    curl https://pyenv.run | bash
-    check_success "Installation of pyenv"
+    # Check if pyenv is already installed
+    if [ -d "$HOME/.pyenv" ]; then
+        echo -e "${YELLOW}pyenv is already installed. Updating...${NC}"
+        cd "$HOME/.pyenv" && git pull
+    else
+        # Install pyenv
+        curl https://pyenv.run | bash
+        check_success "Installation of pyenv"
+    fi
 
-    echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
-    echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
-    echo 'eval "$(pyenv init --path)"' >> ~/.bashrc
-    echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.bashrc
-    source ~/.bashrc
-    check_success "Setting up pyenv"
+    # Add pyenv to shell config if not already present
+    if ! grep -q "PYENV_ROOT" ~/.bashrc; then
+        echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
+        echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
+        echo 'eval "$(pyenv init --path)"' >> ~/.bashrc
+        echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.bashrc
+    fi
+    
+    export PYENV_ROOT="$HOME/.pyenv"
+    export PATH="$PYENV_ROOT/bin:$PATH"
+    eval "$(pyenv init --path)"
+    
+    # Install latest stable Python 3
+    LATEST_PYTHON=$(pyenv install --list | grep -E "^\s*3\.[0-9]+\.[0-9]+$" | tail -1 | xargs)
+    pyenv install -s $LATEST_PYTHON
+    pyenv global $LATEST_PYTHON
+    check_success "Installation of Python $LATEST_PYTHON"
 
-    # Install Python with pyenv
-    pyenv install 3.9.7  # You can specify any version you need
-    pyenv global 3.9.7
-    check_success "Installation of Python and pip"
-
-    echo "Installation of pyenv, Python, and pip completed."
+    echo "Installation of pyenv and Python completed."
+    python --version
 }
 
 get_python_mac() {
     # This function installs pyenv, Python, and pip
-    brew install pyenv pyenv-virtualenv
-    echo 'eval "$(pyenv init --path)"' >> ~/.zshrc
-    echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.zshrc
-    source ~/.zshrc
-
-    # Install Python with pyenv
-    pyenv install 3.9.7  # You can specify any version you need
-    pyenv global 3.9.7
-    check_success "Installation of Python and pip"
+    if command_exists pyenv; then
+        echo -e "${YELLOW}pyenv is already installed. Updating...${NC}"
+        brew upgrade pyenv pyenv-virtualenv
+    else
+        brew install pyenv pyenv-virtualenv
+    fi
+    
+    # Add pyenv to shell config if not already present
+    if ! grep -q "pyenv init" ~/.zshrc; then
+        echo 'eval "$(pyenv init --path)"' >> ~/.zshrc
+        echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.zshrc
+    fi
+    
+    eval "$(pyenv init --path)"
+    
+    # Install latest stable Python 3
+    LATEST_PYTHON=$(pyenv install --list | grep -E "^\s*3\.[0-9]+\.[0-9]+$" | tail -1 | xargs)
+    pyenv install -s $LATEST_PYTHON
+    pyenv global $LATEST_PYTHON
+    check_success "Installation of Python $LATEST_PYTHON"
+    
+    python --version
 }
 
-
 get_flutter() {
-    echo "Installing Flutter..."
+    echo "Installing/Updating Flutter..."
 
     # Check if git is installed, if not, install it
     if ! command -v git &> /dev/null; then
@@ -274,19 +382,24 @@ get_flutter() {
         check_success "Installation of Git"
     fi
 
-    # Download and install Flutter SDK
-    FLUTTER_CHANNEL=stable
-    FLUTTER_VERSION=`curl -s https://storage.googleapis.com/flutter_infra/releases/releases_${FLUTTER_CHANNEL}.json | grep -o 'version[^"]*' | sort --version-sort | tail -1 | awk -F':' '{print $2}' | sed 's/\"//g' | tr -d '[:space:]'`
+    # Check if Flutter is already installed
+    if [ -d "$HOME/flutter" ]; then
+        echo -e "${YELLOW}Flutter is already installed. Updating...${NC}"
+        cd "$HOME/flutter"
+        git pull
+        flutter upgrade
+    else
+        # Download and install Flutter SDK
+        cd ~
+        git clone https://github.com/flutter/flutter.git -b stable
+        check_success "Cloning Flutter repo"
+        
+        # Add Flutter to the path permanently
+        echo 'export PATH="$PATH:$HOME/flutter/bin"' >> ~/.bashrc
+    fi
 
-    cd ~
-    git clone https://github.com/flutter/flutter.git -b $FLUTTER_VERSION
-    check_success "Cloning Flutter repo"
-
-    # Add Flutter to the path permanently
-    echo 'export PATH="$PATH:`pwd`/flutter/bin"' >> ~/.bashrc
-    source ~/.bashrc
-    check_success "Adding Flutter to PATH"
-
+    export PATH="$PATH:$HOME/flutter/bin"
+    
     # Pre-download development binaries
     flutter precache
     check_success "Pre-downloading Flutter development binaries"
@@ -297,111 +410,172 @@ get_flutter() {
 }
 
 get_flutter_mac() {
-  # This function installs Flutter
-  git clone https://github.com/flutter/flutter.git -b stable ~/flutter
-  echo 'export PATH="$PATH:$HOME/flutter/bin"' >> ~/.zshrc
-  source ~/.zshrc
-  flutter precache
-  flutter doctor
+    # This function installs Flutter
+    if [ -d "$HOME/flutter" ]; then
+        echo -e "${YELLOW}Flutter is already installed. Updating...${NC}"
+        cd "$HOME/flutter"
+        git pull
+        flutter upgrade
+    else
+        git clone https://github.com/flutter/flutter.git -b stable ~/flutter
+        echo 'export PATH="$PATH:$HOME/flutter/bin"' >> ~/.zshrc
+    fi
+    
+    export PATH="$PATH:$HOME/flutter/bin"
+    flutter precache
+    flutter doctor
 }
 
 get_go() {
-    echo "Installing Go via Go Version Manager (GVM)..."
+    echo "Installing/Updating Go..."
 
-    # Install GVM
-    bash < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
-    check_success "GVM installation"
+    # Check if Go is already installed via package manager
+    if command_exists go; then
+        echo -e "${YELLOW}Go is already installed${NC}"
+        go version
+        return
+    fi
 
-    # Setup GVM
-    echo "[[ -s \"\$HOME/.gvm/scripts/gvm\" ]] && source \"\$HOME/.gvm/scripts/gvm\"" >> ~/.bashrc
-    source ~/.bashrc
-
-    # Get latest Go version
-    latest=$(gvm listall | grep -o 'go[0-9]\+\.[0-9]\+\.[0-9]\+$' | sort -V | tail -1)
-
-    # Install the latest version of Go
-    gvm install $latest
-    check_success "Installation of latest Go version"
-
-    gvm use $latest --default
-    check_success "Setting latest Go version as default"
-
-    echo "Installation of Go via GVM completed."
-    echo "Version Information:"
+    # Download and install latest Go
+    LATEST_GO=$(curl -s https://go.dev/VERSION?m=text | head -1)
+    wget "https://go.dev/dl/${LATEST_GO}.linux-amd64.tar.gz"
+    $SUDO rm -rf /usr/local/go
+    $SUDO tar -C /usr/local -xzf "${LATEST_GO}.linux-amd64.tar.gz"
+    rm "${LATEST_GO}.linux-amd64.tar.gz"
+    
+    # Add Go to PATH
+    if ! grep -q "/usr/local/go/bin" ~/.bashrc; then
+        echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
+        echo 'export GOPATH=$HOME/go' >> ~/.bashrc
+        echo 'export PATH=$PATH:$GOPATH/bin' >> ~/.bashrc
+    fi
+    
+    export PATH=$PATH:/usr/local/go/bin
+    export GOPATH=$HOME/go
+    export PATH=$PATH:$GOPATH/bin
+    
+    check_success "Installation of Go"
     go version
 }
 
 get_go_mac() {
-  # This function installs Go via Go Version Manager (GVM)
-  brew install go
-  echo 'export GOPATH=$HOME/go' >> ~/.zshrc
-  echo 'export PATH=$PATH:$GOPATH/bin' >> ~/.zshrc
-  source ~/.zshrc
+    # This function installs Go
+    if command_exists go; then
+        echo -e "${YELLOW}Go is already installed. Updating...${NC}"
+        brew upgrade go
+    else
+        brew install go
+    fi
+    
+    if ! grep -q "GOPATH" ~/.zshrc; then
+        echo 'export GOPATH=$HOME/go' >> ~/.zshrc
+        echo 'export PATH=$PATH:$GOPATH/bin' >> ~/.zshrc
+    fi
+    
+    export GOPATH=$HOME/go
+    export PATH=$PATH:$GOPATH/bin
+    
+    go version
 }
 
 get_gcloud_mac() {
-  brew install --cask google-cloud-sdk
-  echo 'source /usr/local/Caskroom/google-cloud-sdk/latest/google-cloud-sdk/path.zsh.inc' >> ~/.zshrc
-  source ~/.zshrc
+    if brew_package_installed "google-cloud-sdk"; then
+        echo -e "${YELLOW}Google Cloud SDK is already installed. Updating...${NC}"
+        gcloud components update
+    else
+        brew install --cask google-cloud-sdk
+        echo 'source "$(brew --prefix)/share/google-cloud-sdk/path.zsh.inc"' >> ~/.zshrc
+        echo 'source "$(brew --prefix)/share/google-cloud-sdk/completion.zsh.inc"' >> ~/.zshrc
+    fi
 }
 
 # Function to check command success
 check_success() {
     if [ $? -eq 0 ]; then
-        echo "$1 successfully completed."
+        echo -e "${GREEN}✓ $1 successfully completed.${NC}"
     else
-        echo "$1 failed. Exiting."
+        echo -e "${RED}✗ $1 failed. Exiting.${NC}"
         exit 1
     fi
+}
+
+# Function to print usage
+print_usage() {
+    echo "Usage: $0 [options]"
+    echo ""
+    echo "Options:"
+    echo "  all              Install all available tools for your OS"
+    echo "  homebrew         Install/Update Homebrew package manager"
+    echo "  chrome           Install Google Chrome"
+    echo "  code             Install/Update VS Code and extensions"
+    echo "  python           Install/Update Python via pyenv"
+    echo "  flutter          Install/Update Flutter SDK"
+    echo "  go               Install/Update Go programming language"
+    echo "  docker           Install Docker"
+    echo "  node             Install/Update Node.js via NVM"
+    echo ""
+    echo "macOS only:"
+    echo "  gcloud           Install Google Cloud SDK"
+    echo "  misc_mac_tools   Install misc command-line tools"
+    echo "  rectangle        Install Rectangle window manager"
+    echo "  ollama           Install Ollama"
+    echo "  hyper            Install Hyper terminal"
+    echo ""
+    echo "You can specify multiple options at once."
 }
 
 # Main function to execute the installation logic based on command-line arguments
 main() {
     # First check the runtime environment
     what_am_i
+    
+    echo -e "${GREEN}Detected OS: $OS${NC}"
+    
     # Initialize required commands list
     REQUIRED_COMMANDS="curl"
 
     # Append OS-specific required commands
     case "$OS" in
-    Linux)
-        REQUIRED_COMMANDS="$REQUIRED_COMMANDS gpg apt-get $SUDO"
+    Linux|Ubuntu|Debian)
+        REQUIRED_COMMANDS="$REQUIRED_COMMANDS apt-get"
         ;;
-    Darwin|macOS)  # macOS is identified as "Darwin"
-        REQUIRED_COMMANDS="$REQUIRED_COMMANDS"
+    Darwin|macOS)
+        # macOS has everything needed by default
         ;;
     *)
-        echo "Unsupported operating system: $OS"
+        echo -e "${RED}Unsupported operating system: $OS${NC}"
         exit 1
         ;;
     esac
 
     # Check for necessary commands
     for cmd in $REQUIRED_COMMANDS; do
-    if ! command -v $cmd &> /dev/null; then
-        echo "This script requires $cmd, but it is not installed. Exiting."
-        exit 1
-    fi
+        if ! command -v $cmd &> /dev/null; then
+            echo -e "${RED}This script requires $cmd, but it is not installed. Exiting.${NC}"
+            exit 1
+        fi
     done
 
     # Check if the user is root
     if [[ $EUID -eq 0 ]]; then
-    echo "This script should not be run as root. Exiting."
-    exit 1
+        echo -e "${RED}This script should not be run as root. Exiting.${NC}"
+        exit 1
     fi
 
-    # Set sudo command with non-interactive flag to prevent asking for password again and again
-    SUDO="sudo -n"
+    # Set sudo command
+    if [ "$OS" != "macOS" ]; then
+        SUDO="sudo"
+    fi
 
     for arg in "$@"; do
         case "$arg" in
             all)
-                # Your existing code for installing all packages
+                echo -e "${GREEN}Installing all packages for $OS...${NC}"
                 if [ "$OS" == "macOS" ]; then
                     # Install all macOS related packages
                     get_homebrew
                     get_chrome_mac
-		            get_code_mac
+                    get_code_mac
                     get_python_mac
                     get_flutter_mac
                     get_go_mac
@@ -424,7 +598,7 @@ main() {
                 fi
                 ;;
             homebrew)
-                    get_homebrew
+                get_homebrew
                 ;;
             chrome)
                 if [ "$OS" == "macOS" ]; then
@@ -465,7 +639,7 @@ main() {
                 if [ "$OS" == "macOS" ]; then
                     get_gcloud_mac
                 else
-                    echo "gcloud is only currently available on macOS"
+                    echo -e "${YELLOW}gcloud installation for Linux not yet implemented${NC}"
                 fi
                 ;;
             docker)
@@ -479,48 +653,53 @@ main() {
                 if [ "$OS" == "macOS" ]; then
                     misc_mac_tools
                 else
-                    echo "misc_mac_tools is only available on macOS"
+                    echo -e "${YELLOW}misc_mac_tools is only available on macOS${NC}"
                 fi
                 ;;
             rectangle)
                 if [ "$OS" == "macOS" ]; then
                     get_rectangle_mac
                 else
-                    echo "Rectangle is only available on macOS"
+                    echo -e "${YELLOW}Rectangle is only available on macOS${NC}"
                 fi
                 ;;
             ollama)
                 if [ "$OS" == "macOS" ]; then
                     get_ollama_mac
                 else
-                    echo "Ollama is only available on macOS"
+                    echo -e "${YELLOW}Ollama is only available on macOS in this script${NC}"
                 fi
                 ;;
             hyper)
                 if [ "$OS" == "macOS" ]; then
                     get_hyper_mac
                 else
-                    echo "Hyper is only available on macOS"
+                    echo -e "${YELLOW}Hyper is only available on macOS in this script${NC}"
                 fi
                 ;;
             node)
                 get_node
                 ;;
+            -h|--help|help)
+                print_usage
+                exit 0
+                ;;
             *)
-                echo "Invalid argument provided: $arg"
-                echo "Usage: $0 {all|homebrew|code|python|flutter|go|gcloud|docker|node|misc_mac_tools|rectangle|ollama|hyper}..."
+                echo -e "${RED}Invalid argument provided: $arg${NC}"
+                print_usage
                 exit 1
                 ;;
         esac
     done
+
+    echo -e "${GREEN}All requested installations completed!${NC}"
 }
 
 # Check if any command line argument is provided
 if [ "$#" -eq 0 ]; then
-    echo "No arguments provided."
-    echo "Usage: $0 {all|homebrew|code|python|flutter|go|gcloud|docker|node|misc_mac_tools|rectangle|ollama|hyper}..."
+    echo -e "${YELLOW}No arguments provided.${NC}"
+    print_usage
     exit 1
 else
     main "$@"
 fi
-
