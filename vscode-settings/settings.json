@@ -1,0 +1,26 @@
+{
+    "git.autofetch": true,
+    "redhat.telemetry.enabled": false,
+    "go.toolsManagement.autoUpdate": true,
+    "[dart]": {
+        "editor.formatOnSave": true,
+        "editor.formatOnType": true,
+        "editor.rulers": [
+            80
+        ],
+        "editor.selectionHighlight": false,
+        "editor.suggestSelection": "first",
+        "editor.tabCompletion": "onlySnippets",
+        "editor.wordBasedSuggestions": "off"
+    },
+    "vs-kubernetes": {
+        "vs-kubernetes.minikube-show-information-expiration": "2025-08-03T17:51:07.327Z"
+    },
+    "git.confirmSync": false,
+    "chat.editing.alwaysSaveWithGeneratedChanges": true,
+    "security.workspace.trust.untrustedFiles": "open",
+    "cline.vsCodeLmModelSelector": {},
+    "claudeCode.preferredLocation": "panel",
+    "github.copilot.nextEditSuggestions.enabled": true,
+    "chat.tools.terminal.outputLocation": "chat"
+}
